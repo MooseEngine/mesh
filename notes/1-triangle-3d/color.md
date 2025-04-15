@@ -1,0 +1,2 @@
+## Representing Colors
+Two ways to represent colors are with either `int`s or `float`s. Using an `int`, you would might have a value between `0` and `255`. Using `float`, you may have a value between `0.0f` and `1.0f`. Using `float`s is often more convenient and precise because you don't lose precision when doing division operations as you would with an integer, and only need to round to an integer between `0` and `255` one time, when you rasterize your object(s).
