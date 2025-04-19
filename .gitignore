@@ -1,2 +1,4 @@
 *.o
-rasterizer
+moose_engine
+build/
+
