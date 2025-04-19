@@ -12,3 +12,13 @@ add_executable(moose_engine
 	src/core/Mat4.cpp
 	src/core/Vec4.cpp
 )
+
+
+# SDL2
+# SDL2::SDL2 is the core library
+# SDL2::SDL2main provides main entry-point on some platforms
+target_link_libraries(moose_engine
+	PRIVATE
+		SDL2::SDL2
+		SDL2::SDL2main
+)
