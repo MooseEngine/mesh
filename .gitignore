@@ -1,4 +1,6 @@
 *.o
 moose_engine
 build/
+.old-triangle-3d
+.cache
 
