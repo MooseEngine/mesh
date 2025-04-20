@@ -9,7 +9,8 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_executable(moose_engine
 	src/main.cpp
-	src/graphics/Renderer.cpp
+	src/engine/Engine.cpp
+	src/graphics/Camera.cpp
 )
 
 find_package(SDL2 REQUIRED)

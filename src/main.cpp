@@ -2,7 +2,7 @@
 
 #include "moose/core/Mat4.h"
 #include "moose/core/Vec4.h"
-#include "moose/graphics/Renderer.h"
+#include "moose/engine/Engine.h"
 
 int main() {
 	/*
@@ -15,11 +15,10 @@ int main() {
 	 * renderer.drawMesh(Mesh, Camera)
 	 * renderer.present()
 	 */
-	using moose::graphics::Renderer;
+	using moose::engine::Engine;
 	using moose::core::Mat4;
 	using moose::core::Vec4;
 
-	Renderer renderer = Renderer(800, 600);
 
 	return 0;
 }
