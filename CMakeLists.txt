@@ -9,10 +9,10 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_executable(moose_engine
 	src/main.cpp
-	src/core/Mat4.cpp
-	src/core/Vec4.cpp
+	src/graphics/Renderer.cpp
 )
 
+find_package(SDL2 REQUIRED)
 
 # SDL2
 # SDL2::SDL2 is the core library

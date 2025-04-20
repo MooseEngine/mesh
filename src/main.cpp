@@ -1,23 +1,25 @@
 #include <stdio.h>
+
 #include "moose/core/Mat4.h"
 #include "moose/core/Vec4.h"
+#include "moose/graphics/Renderer.h"
 
 int main() {
-	moose::core::Mat4 m = moose::core::Mat4{{
-		{1, 0, 0, 0},
-		{1, 1, 0, 0},
-		{0, 0, 1, 0},
-		{0, 0, 0, 1}
-	}};
-	
-	moose::core::Vec4 v = moose::core::Vec4{
-		3, 6, 9, 1
-	};
+	/*
+	 * Create renderer
+	 * Create camera
+	 *
+	 * Load object/mesh/triangle
+	 *
+	 * renderer.clear()
+	 * renderer.drawMesh(Mesh, Camera)
+	 * renderer.present()
+	 */
+	using moose::graphics::Renderer;
+	using moose::core::Mat4;
+	using moose::core::Vec4;
 
-	v = m * v;
+	Renderer renderer = Renderer(800, 600);
 
-	printf("Vector:\n");
-	printf("[%f, %f, %f, %f]\n", v.x, v.y, v.z, v.w);
-	
 	return 0;
 }

@@ -2,30 +2,33 @@
 #define MOOSE_GRAPHICS_RENDERER_H
 
 #include <SDL2/SDL.h>
+#include <vector>
 
 #include "moose/graphics/Camera.h"
 #include "moose/graphics/Mesh.h"
 
 namespace moose::graphics {
 	class Renderer {
-	private:
-		int width, height;
-		SDL_Window *window;
-		SDL_Renderer *renderer;
-		SDL_Texture *texture;
-
-		bool initializeSDL(); // TODO: is there a better name for this? abstract more?
-		SDL_Window createWindow();
-		SDL_Renderer createRenderer();
-		SDL_Texture createTexture();
-
-		void cleanup();
 	public:
 		Renderer(int width, int height);
+		~Renderer();
 
 		bool clear();
 		bool drawMesh(Mesh mesh, Camera camera);
 		bool present();
+
+	private:
+		int width, height;
+		std::vector<uint32_t> frameBuffer;
+		std::vector<float> depthBuffer;
+
+		SDL_Window *window		= nullptr;
+		SDL_Renderer *renderer	= nullptr;
+		SDL_Texture *texture	= nullptr;
+
+		void createWindow();
+		void createRenderer();
+		void createTexture();
 	};
 }
 
