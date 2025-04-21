@@ -10,6 +10,14 @@
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
 
+/**
+ * TODO:
+ *	- implement logging/debugging system
+ *	- get camera movement working
+ *	- implement an actual model matrix (as opposed to the identity matrix that
+ *	- implement file IO to load .obj files etc rather than manually creating meshes
+ */
+
 int main() {
 	/*
 	 * Create renderer
