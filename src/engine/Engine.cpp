@@ -146,14 +146,16 @@ namespace moose::engine {
 			const graphics::Vertex v2 = mesh.vertices[ mesh.indices[i + 2] ];
 
 			graphics::ClipVertex tv0 = this->transformVertex(v0, MVP);
+			/* NOTE: DEBUG
 			std::cout << "V0 → (" 
 				<< tv0.screenPos.x << ", " 
 				<< tv0.screenPos.y << "), depth=" 
 				<< tv0.depth << "\n";
+			// NOTE: END DEBUG */
 			graphics::ClipVertex tv1 = this->transformVertex(v1, MVP);
 			graphics::ClipVertex tv2 = this->transformVertex(v2, MVP);
 
-			// NOTE: DEBUG
+			/* NOTE: DEBUG
 			auto plotPixel = [&](const graphics::ClipVertex &tv){
 				int sx = int(tv.screenPos.x);
 				int sy = int(tv.screenPos.y);
@@ -166,7 +168,7 @@ namespace moose::engine {
 			plotPixel(tv0);
 			plotPixel(tv1);
 			plotPixel(tv2);
-			// NOTE: END DEBUG
+			// NOTE: END DEBUG */
 
 			this->rasterizeTriangle(tv0, tv1, tv2);
 		}
@@ -242,7 +244,25 @@ namespace moose::engine {
 				if ((bary.alpha >= 0 && bary.beta >= 0 && bary.gamma >= 0)
 				 && (bary.alpha <= 1 && bary.beta <= 1 && bary.gamma <= 1)) {
 					// then is inside triangle
-					frameBuffer[y * screenWidth + x] = 0xFFFF0000;
+					
+					float denom = bary.alpha * tri.v0.oneOverW + bary.beta * tri.v1.oneOverW + bary.gamma * tri.v2.oneOverW;
+
+					graphics::ColorF c =
+						( bary.alpha	* tri.v0.colorOverW
+						+ bary.beta		* tri.v1.colorOverW
+						+ bary.gamma	* tri.v2.colorOverW ) / denom;
+
+					float depth = 
+						( bary.alpha	* tri.v0.depth * tri.v0.oneOverW
+						+ bary.beta		* tri.v1.depth * tri.v1.oneOverW
+						+ bary.gamma	* tri.v2.depth * tri.v2.oneOverW ) / denom;
+
+					size_t idx = y * screenWidth + x;
+
+					if(depth < depthBuffer[idx]) {
+						depthBuffer[idx] = depth;
+						frameBuffer[idx] = graphics::packColor(c);
+					}
 				}
 			}
 		}
