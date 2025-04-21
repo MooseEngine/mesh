@@ -14,9 +14,6 @@ namespace moose::core {
 			v.w / s,
 		};
 	}
-	inline Vec4 operator/=(const Vec4 &v, float &s) noexcept {
-		return v / s;
-	}
 
 } // namespace moose::core
 

@@ -27,10 +27,10 @@ namespace moose::graphics {
 
 	inline uint32_t packColor(const ColorF& c) noexcept {
 		auto clamp = [](float x){ return uint8_t(std::max(0.0f, std::min(1.0f, x))*255.0f); };
-		return (uint32_t(clamp(c.r)) << 24)
-			 | (uint32_t(clamp(c.g)) << 16)
-			 | (uint32_t(clamp(c.b)) <<  8)
-			 | (uint32_t(clamp(c.a)) <<  0);
+		return (uint32_t(clamp(c.a)) << 24)
+			 | (uint32_t(clamp(c.r)) << 16)
+			 | (uint32_t(clamp(c.g)) <<  8)
+			 | (uint32_t(clamp(c.b)) <<  0);
 	}
 
 }

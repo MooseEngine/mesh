@@ -6,12 +6,13 @@
 #include <vector>
 #include <string>
 
+#include "moose/graphics/Mesh.h"
+
 // Forward declaration so you don't have to include the whole header file.
 // This is fine when you only use references/pointers of the forward-declared
 // classes.
 namespace moose::graphics {
-	struct Mesh;
-	struct TransformedVertex;
+	struct ClipVertex;
 	struct Vertex;
 	struct ScreenTriangle;
 	class Camera;
@@ -29,7 +30,7 @@ namespace moose::engine {
 
 		void run();
 
-		void addMesh(std::shared_ptr<graphics::Mesh> Mesh);
+		void addMesh(std::shared_ptr<graphics::Mesh> mesh);
 		void clearMeshes();
 
 	private:
@@ -58,11 +59,11 @@ namespace moose::engine {
 		void render();
 		void clear();
 		void drawMesh(graphics::Mesh &mesh, graphics::Camera &camera);
-		graphics::TransformedVertex transformVertex(const graphics::Vertex &vertex, core::Mat4 &MVP) const;
+		graphics::ClipVertex transformVertex(const graphics::Vertex &vertex, core::Mat4 &MVP) const;
 		void rasterizeTriangle(
-				graphics::TransformedVertex &v0,
-				graphics::TransformedVertex &v1,
-				graphics::TransformedVertex &v2
+				graphics::ClipVertex &v0,
+				graphics::ClipVertex &v1,
+				graphics::ClipVertex &v2
 				);
 		void present();
 		

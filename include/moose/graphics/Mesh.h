@@ -14,6 +14,9 @@ namespace moose::graphics {
 	struct Mesh {
 		std::vector<Vertex>		vertices;	// All points in the mesh
 		std::vector<uint32_t>	indices;	// Indices of `vertices`. Every 3 indices reference 3 vertices that form a triangle
+
+		Mesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices)
+			: vertices(std::move(vertices)), indices(std::move(indices)) {}
 	};
 }
 

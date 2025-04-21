@@ -1,3 +1,5 @@
+#include <iostream>
+#include <ostream>
 #include <stdexcept>
 #include <SDL2/SDL.h>
 
@@ -8,7 +10,7 @@
 #include "moose/graphics/Camera.h"
 #include "moose/graphics/Mesh.h"
 #include "moose/graphics/ScreenTriangle.h"
-#include "moose/graphics/TransformedVertex.h"
+#include "moose/graphics/ClipVertex.h"
 #include "moose/graphics/Vertex.h"
 #include "moose/graphics/ColorF.h"
 #include "moose/graphics/raster/RasterUtils.h"
@@ -45,6 +47,8 @@ namespace moose::engine {
 	void Engine::run() {
 		Uint32 lastTime = SDL_GetTicks();
 
+		std::cout << "Running\n" << std::flush;
+
 		while (running) {
 			Uint32 currentTime = SDL_GetTicks();
 			float deltaTime = (currentTime - lastTime) / 1000.0f; // deltaTime in seconds
@@ -55,11 +59,17 @@ namespace moose::engine {
 		}
 	}
 
+	void Engine::addMesh(std::shared_ptr<graphics::Mesh> mesh) {
+		meshes.push_back(mesh);
+	}
+	void Engine::clearMeshes() {
+		meshes.clear();
+	}
 
 /* PRIVATE */
 	void Engine::createWindow() {
 		SDL_Window *window = SDL_CreateWindow(
-			"Software Rasterizer",
+			this->title.c_str(),
 			SDL_WINDOWPOS_UNDEFINED,
 			SDL_WINDOWPOS_UNDEFINED,
 			this->screenWidth,
@@ -94,7 +104,7 @@ namespace moose::engine {
 		SDL_Event event;
 
 		while (SDL_PollEvent(&event)) {
-			if (event.type == SDL_QUIT) running = 0;
+			if (event.type == SDL_QUIT) running = false;
 		}
 
 	}
@@ -105,12 +115,21 @@ namespace moose::engine {
 		for (auto &m : meshes) {
 			this->drawMesh(*m, *this->camera);
 		}
+		/* wipe your CPU buffer to opaque red
+		std::fill(
+			frameBuffer.begin(),
+			frameBuffer.end(),
+			0xFFFF0000u    // ARGB: A=0xFF,R=0xFF,G=B=0
+		);
+		*/
 
 		this->present();
 	}
 
 	void Engine::clear() {
 		SDL_RenderClear(renderer);
+		std::fill(depthBuffer.begin(), depthBuffer.end(), 1.0f);  // “far” plane
+		std::fill(frameBuffer.begin(), frameBuffer.end(), 0xFF000000);  // black opaque
 	}
 
 	void Engine::drawMesh(graphics::Mesh &mesh, graphics::Camera &camera) {
@@ -126,15 +145,34 @@ namespace moose::engine {
 			const graphics::Vertex v1 = mesh.vertices[ mesh.indices[i + 1] ];
 			const graphics::Vertex v2 = mesh.vertices[ mesh.indices[i + 2] ];
 
-			graphics::TransformedVertex tv0 = this->transformVertex(v0, MVP);
-			graphics::TransformedVertex tv1 = this->transformVertex(v1, MVP);
-			graphics::TransformedVertex tv2 = this->transformVertex(v2, MVP);
+			graphics::ClipVertex tv0 = this->transformVertex(v0, MVP);
+			std::cout << "V0 → (" 
+				<< tv0.screenPos.x << ", " 
+				<< tv0.screenPos.y << "), depth=" 
+				<< tv0.depth << "\n";
+			graphics::ClipVertex tv1 = this->transformVertex(v1, MVP);
+			graphics::ClipVertex tv2 = this->transformVertex(v2, MVP);
+
+			// NOTE: DEBUG
+			auto plotPixel = [&](const graphics::ClipVertex &tv){
+				int sx = int(tv.screenPos.x);
+				int sy = int(tv.screenPos.y);
+				if (sx >= 0 && sx < screenWidth && sy >= 0 && sy < screenHeight) {
+					size_t idx = sy * screenWidth + sx;
+					frameBuffer[idx] = 0xFFFFFFFFu;  // white opaque
+				}
+			};
+
+			plotPixel(tv0);
+			plotPixel(tv1);
+			plotPixel(tv2);
+			// NOTE: END DEBUG
 
 			this->rasterizeTriangle(tv0, tv1, tv2);
 		}
 	}
 
-	graphics::TransformedVertex Engine::transformVertex(const graphics::Vertex &vertex, core::Mat4 &MVP) const {
+	graphics::ClipVertex Engine::transformVertex(const graphics::Vertex &vertex, core::Mat4 &MVP) const {
 		// Promote to Vec4
 		core::Vec4 clipPos = MVP * core::Vec4{
 			vertex.position.x,
@@ -145,61 +183,66 @@ namespace moose::engine {
 
 		float oneOverW = 1 / clipPos.w;
 
-		clipPos /= clipPos.w;
+		clipPos = clipPos / clipPos.w;
 
-		return graphics::TransformedVertex{
+		return graphics::ClipVertex{
 			{
 				((clipPos.x + 1.0f) * 0.5f * this->screenWidth),			// screenX
 				((1.0f - (clipPos.y + 1.0f) * 0.5f) * this->screenHeight)	// screenY
 			},
-			clipPos.y,												// depth
+			clipPos.z,												// depth
 			oneOverW,												// 1 / w
 			vertex.color * oneOverW									// color / w
 		};
 	}
+
 	void Engine::rasterizeTriangle(
-			graphics::TransformedVertex &v0,
-			graphics::TransformedVertex &v1,
-			graphics::TransformedVertex &v2
+			graphics::ClipVertex &tv0,
+			graphics::ClipVertex &tv1,
+			graphics::ClipVertex &tv2
 			) {
-		graphics::ScreenTriangle tri = { v0, v1, v2 };
-		for(int i = 0; i < screenWidth * screenHeight; i++) {
-			tri.invArea = graphics::raster::edgeFunction(tri.v0.screenPos, tri.v1.screenPos, tri.v2.screenPos);
+		
+		graphics::ScreenTriangle tri {tv0, tv1, tv2};
 
-			// TODO: bounding box
-			for(int y = 0; y < this->screenHeight; y++) {
-				for(int x = 0; x < this->screenWidth; x++) {
-					core::Vec2 p{ x + 0.5f, y + 0.5f }; // Sample from the middle of the pixel
+		// bounding‐box optimization (optional, but *highly* recommended)
+		int minX = std::max(0,   int(std::floor(std::min({ tv0.screenPos.x, tv1.screenPos.x, tv2.screenPos.x }))));
+		int maxX = std::min(screenWidth-1,  int(std::ceil (std::max({ tv0.screenPos.x, tv1.screenPos.x, tv2.screenPos.x }))));
+		int minY = std::max(0,   int(std::floor(std::min({ tv0.screenPos.y, tv1.screenPos.y, tv2.screenPos.y }))));
+		int maxY = std::min(screenHeight-1, int(std::ceil (std::max({ tv0.screenPos.y, tv1.screenPos.y, tv2.screenPos.y }))));
 
-					// Compute the three un‑normalized weights
-					float w0 = graphics::raster::edgeFunction(tri.v1.screenPos, tri.v2.screenPos, p);
-					float w1 = graphics::raster::edgeFunction(tri.v2.screenPos, tri.v0.screenPos, p);
-					float w2 = graphics::raster::edgeFunction(tri.v0.screenPos, tri.v1.screenPos, p);
+		for (int y = minY; y <= maxY; ++y) {
+			for (int x = minX; x <= maxX; ++x) {
+				core::Vec2 p{ x + 0.5f, y + 0.5f };
 
-					// compute true barycentric coordinates
-					core::Vec3 bary{ w0, w1, w2 };
-					bary *= tri.invArea;
+				graphics::raster::Bary3 bary = graphics::raster::computeBarycentrics(tri, p);
+			
+				/* NOTE: disabled for debugging 
+				
+				// perspective‑correct interpolation
+				float invW = bary.alpha * tv0.oneOverW
+					+ bary.beta * tv1.oneOverW
+					+ bary.gamma * tv2.oneOverW;
 
-					if (bary.x >= 0 && bary.y >= 0 && bary.z >= 0) {
-						// perspective‑correct interpolate:
-						float invW = bary.x * tri.v0.oneOverW
-							+ bary.y * tri.v1.oneOverW
-							+ bary.z * tri.v2.oneOverW;
+				graphics::ColorF c = (bary.alpha * tv0.colorOverW
+					+ bary.beta * tv1.colorOverW
+					+ bary.gamma * tv2.colorOverW) / invW;
 
-						graphics::ColorF c = (bary.x * tri.v0.colorOverW
-							+ bary.y * tri.v1.colorOverW
-							+ bary.z * tri.v2.colorOverW) / invW;
+				float depth = (bary.alpha * tv0.depth
+					+ bary.beta * tv1.depth
+					+ bary.gamma * tv2.depth) / invW;
 
-						float depth = (bary.x * tri.v0.depth
-							+ bary.y * tri.v1.depth
-							+ bary.z * tri.v2.depth) / invW;
+				// depth test
+				size_t idx = y * screenWidth + x;
+				if (depth < depthBuffer[idx]) {
+					depthBuffer[idx]    = depth;
+					frameBuffer[idx]    = graphics::packColor(c);
+				}
+				*/
 
-						// depth-test and write pixel
-						if (this->depthBuffer[y*this->screenWidth + x] > depth) {
-							this->depthBuffer[y*this->screenWidth + x] = depth;
-							this->frameBuffer[y*this->screenWidth + x] = graphics::packColor(c);
-						}
-					}
+				if ((bary.alpha >= 0 && bary.beta >= 0 && bary.gamma >= 0)
+				 && (bary.alpha <= 1 && bary.beta <= 1 && bary.gamma <= 1)) {
+					// then is inside triangle
+					frameBuffer[y * screenWidth + x] = 0xFFFF0000;
 				}
 			}
 		}
