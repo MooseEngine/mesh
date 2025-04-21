@@ -32,11 +32,22 @@ int main() {
 	moose::engine::Engine engine = moose::engine::Engine(800, 600, std::move(camera), "Moose Engine");
 
 	std::vector<moose::graphics::Vertex> vertices {
+		// triangle 1
 		{{502, 3  , 200}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
 		{{381, 242, 300}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
 		{{119, 113, 400}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}},
+		
+		// triangle 2
+		{{300, 100, 150}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
+		{{350, 100, 150}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
+		{{334, 123, 150}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}},
+		
 	};
-	std::vector<uint32_t> indices {0, 1, 2};
+	std::vector<uint32_t> indices {
+		0, 1, 2,	// triangle 1
+		3, 4, 5		// triangle 2
+
+	};
 
 	auto triangle = std::make_shared<moose::graphics::Mesh>(std::move(vertices), std::move(indices));
 
